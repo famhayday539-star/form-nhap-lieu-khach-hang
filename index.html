@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Nhập Liệu Nội Bộ</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: #fff; padding: 25px 35px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #555; font-size: 14px; }
+        input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 15px; transition: border-color 0.3s; }
+        input:focus { border-color: #007bff; outline: none; }
+        button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #9abce3; cursor: not-allowed; }
+        .msg-box { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; font-weight: 500; display: none; }
+        .msg-error { background-color: #ffe6e6; color: #d93025; border: 1px solid #f5c2c7; display: block; }
+        .msg-success { background-color: #e6f4ea; color: #1e8e3e; border: 1px solid #badbcc; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Nhập Thông Tin</h2>
+    <form id="dataForm">
+        <div class="form-group">
+            <label>Họ và Tên</label>
+            <input type="text" id="hoTen" required placeholder="Nhập đầy đủ họ tên">
+        </div>
+        <div class="form-group">
+            <label>Số CCCD</label>
+            <input type="text" id="cccd" required placeholder="Gồm 12 chữ số" pattern="\d{12}" title="CCCD phải bao gồm đúng 12 chữ số" maxlength="12">
+        </div>
+        <div class="form-group">
+            <label>Số Điện Thoại</label>
+            <input type="tel" id="sdt" required placeholder="Nhập số điện thoại" pattern="\d{10,11}" title="SĐT hợp lệ gồm 10-11 số" maxlength="11">
+        </div>
+        <button type="submit" id="submitBtn">Lưu Dữ Liệu</button>
+    </form>
+    <div id="msgBox" class="msg-box"></div>
+</div>
+
+<script>
+    // --- DÁN LINK WEB APP TỪ GOOGLE APPS SCRIPT VÀO ĐÂY ---
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVI6gELQ6FRIvtsRUMQEM6ZCAMIPcazCyxjUw9Urq-wFyKbAvaxNWOcCHUq5IdalAoIA/exec';
+
+    document.getElementById('dataForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const btn = document.getElementById('submitBtn');
+        const msgBox = document.getElementById('msgBox');
+        
+        // Reset trạng thái tin nhắn
+        msgBox.className = "msg-box"; 
+        msgBox.innerText = "";
+
+        const payload = {
+            hoTen: document.getElementById('hoTen').value.trim(),
+            cccd: document.getElementById('cccd').value.trim(),
+            sdt: document.getElementById('sdt').value.trim()
+        };
+
+        // Chuyển UI sang trạng thái chờ
+        btn.innerText = "Đang kiểm tra & lưu...";
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                // Dùng text/plain để vượt qua bài toán CORS Preflight của trình duyệt
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await response.json();
+
+            // Xử lý logic theo phản hồi từ Google Sheet
+            if (result.status === 'error' && result.message === 'đã có') {
+                msgBox.innerText = "Cảnh báo: CCCD này đã có trong hệ thống!";
+                msgBox.classList.add("msg-error");
+            } else if (result.status === 'success') {
+                msgBox.innerText = "Đã lưu thành công!";
+                msgBox.classList.add("msg-success");
+                document.getElementById('dataForm').reset(); // Xóa trắng form
+            } else {
+                msgBox.innerText = "Lỗi hệ thống: " + result.message;
+                msgBox.classList.add("msg-error");
+            }
+        } catch (error) {
+            msgBox.innerText = "Lỗi kết nối mạng, vui lòng thử lại!";
+            msgBox.classList.add("msg-error");
+            console.error("Fetch Error:", error);
+        } finally {
+            btn.innerText = "Lưu Dữ Liệu";
+            btn.disabled = false;
+        }
+    });
+</script>
+
+</body>
+</html>
